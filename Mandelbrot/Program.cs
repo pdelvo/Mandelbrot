@@ -22,18 +22,27 @@ namespace Mandelbrot
 
         private unsafe static void SetupViewport()
         {
-            var mandelbrot = new MandelbrotHelper(maxRecursionCount: 200);
-            mandelbrot.Initialize();
 
             GameWindow window = new GameWindow(DisplayDevice.Default.Width, DisplayDevice.Default.Height, OpenTK.Graphics.GraphicsMode.Default, "Mandelbrot", GameWindowFlags.Fullscreen);
             int tex;
+
+            OpenTK.Graphics.IGraphicsContextInternal ctx = (OpenTK.Graphics.IGraphicsContextInternal)OpenTK.Graphics.GraphicsContext.CurrentContext;
+
+            IntPtr contextHandle = ctx.Context.Handle;
+
+
+
+            var mandelbrot = new MandelbrotHelper(maxRecursionCount: 200);
+            mandelbrot.Initialize();
+
+
             GL.Hint(HintTarget.PerspectiveCorrectionHint, HintMode.Nicest);
 
             GL.GenTextures(1, out tex);
             GL.BindTexture(TextureTarget.Texture2D, tex);
 
-
-            fixed (byte* p =  mandelbrot.GetNextImageFrame())
+            mandelbrot.GetNextImageFrame();
+            fixed (byte* p =  mandelbrot.ReadResultBuffer())
             {
                 GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, 1200, 800, 0, PixelFormat.Bgra, PixelType.UnsignedByte, (IntPtr)p);
             }
@@ -70,11 +79,14 @@ namespace Mandelbrot
 
             window.UpdateFrame += (s, e) =>
             {
-                if(changed)
-                    fixed (byte* p = mandelbrot.GetNextImageFrame())
+                if (changed)
+                {
+                    mandelbrot.GetNextImageFrame();
+                    fixed (byte* p = mandelbrot.ReadResultBuffer())
                     {
                         GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, 1200, 800, 0, PixelFormat.Bgra, PixelType.UnsignedByte, (IntPtr)p);
                     }
+                }
                 changed = false;
             };
             window.RenderFrame += (sender, e) =>
@@ -102,7 +114,7 @@ namespace Mandelbrot
             GL.PushMatrix();
             GL.LoadIdentity();
 
-            //GL.Disable(EnableCap.Lighting);
+            GL.Disable(EnableCap.Lighting);
 
             GL.Enable(EnableCap.Texture2D);
 

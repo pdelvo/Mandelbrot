@@ -4,7 +4,7 @@ double distanceSquared(double a, double b){
 	return a * a + b * b;
 }
 
-__kernel void MandelBrotTest (int maxRecursion, double middleX, double middleY, double width, double height, int dataWidth, int dataHeight, __global int* result){   
+__kernel void Mandelbrot (int maxRecursion, double middleX, double middleY, double width, double height, int dataWidth, int dataHeight, __global int* result){   
 	int id = get_global_id(0);
 
 	int x = id % dataWidth;
@@ -32,7 +32,7 @@ __kernel void MandelBrotTest (int maxRecursion, double middleX, double middleY, 
 	}
 }
 
-__kernel void toBitmap(int maxRecursionCount, __global int* result, __global char* bitmap){
+__kernel void ToBitmap(int maxRecursionCount, __global int* result, __global char* bitmap){
 	int id = get_global_id(0);
 	bitmap[id*4+0] = (char)(result[id] * 255 / maxRecursionCount);
 	bitmap[id*4+1] = (char)(result[id] * 255 / maxRecursionCount);
