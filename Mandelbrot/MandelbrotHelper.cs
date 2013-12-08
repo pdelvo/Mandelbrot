@@ -76,7 +76,7 @@ namespace Mandelbrot
             if (_context == null)
             {
                 ComputeContextPropertyList list = new ComputeContextPropertyList(ComputePlatform.Platforms[0]);
-                _context = new ComputeContext(ComputeDeviceTypes.Gpu, list, null, IntPtr.Zero);
+                _context = new ComputeContext(ComputeDeviceTypes.All, list, null, IntPtr.Zero);
             }
             _program = new ComputeProgram(_context, File.ReadAllText("Mandelbrot.cl"));
 
@@ -92,7 +92,7 @@ namespace Mandelbrot
             _toBitmap.SetMemoryArgument(1, _resultBuffer);
             _toBitmap.SetMemoryArgument(2, _bitmapBuffer);
 
-            _commandQueue = new ComputeCommandQueue(_context, _context.Devices[0], ComputeCommandQueueFlags.None);
+            _commandQueue = new ComputeCommandQueue(_context, _context.Devices.OrderBy(a => a.Type).Where(a => a.Extensions.Contains("cl_khr_fp64")).First(), ComputeCommandQueueFlags.None);
         }
 
         public byte[] ReadResultBuffer()
