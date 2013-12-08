@@ -75,8 +75,8 @@ namespace Mandelbrot
         {
             if (_context == null)
             {
-                ComputeContextPropertyList list = new ComputeContextPropertyList(ComputePlatform.Platforms[0]);
-                var devices = ComputePlatform.Platforms.SelectMany(a => a.Devices).Where(a=>a.Extensions.Contains("cl_khr_fp64")).Take(1).ToArray();
+                var devices = ComputePlatform.Platforms.SelectMany(a => a.Devices).Where(a => a.Extensions.Contains("cl_khr_fp64")).Take(1).ToArray();
+                ComputeContextPropertyList list = new ComputeContextPropertyList(devices[0].Platform);
                 _context = new ComputeContext(devices, list, null, IntPtr.Zero);
             }
             _program = new ComputeProgram(_context, File.ReadAllText("Mandelbrot.cl"));
