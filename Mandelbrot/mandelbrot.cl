@@ -1,6 +1,6 @@
 ﻿#pragma OPENCL EXTENSION cl_khr_fp64: enable
 
-double distanceSquared(double a, double b){
+double inline distanceSquared(double a, double b){
 	return a * a + b * b;
 }
 
@@ -25,10 +25,8 @@ __kernel void Mandelbrot (int maxRecursion, double middleX, double middleY, doub
 		resultB = 2 * resultA * resultB + b;
 		resultA = temp;
 		if(distanceSquared(resultA, resultB) > 4)
-		{
 			break;
-		}
-		result[id] = i - 1;
+		result[id] = i ;
 	}
 }
 

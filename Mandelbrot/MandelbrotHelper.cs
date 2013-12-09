@@ -103,6 +103,10 @@ namespace Mandelbrot
             _commandQueue.ReadFromBuffer(_bitmapBuffer, ref bitmap, true, null);
             return bitmap;
         }
+        public void ReadResultBuffer(byte[] bitmap)
+        {
+            _commandQueue.ReadFromBuffer(_bitmapBuffer, ref bitmap, true, null);
+        }
 
         public void GetNextImageFrame()
         {

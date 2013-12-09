@@ -22,17 +22,20 @@ namespace Mandelbrot
 
         private unsafe static void SetupViewport()
         {
-
-            GameWindow window = new GameWindow(DisplayDevice.Default.Width, DisplayDevice.Default.Height, OpenTK.Graphics.GraphicsMode.Default, "Mandelbrot", GameWindowFlags.Fullscreen);
+            int width = 800;
+            int height = 600;
+            GameWindow window = new GameWindow(width, height, OpenTK.Graphics.GraphicsMode.Default, "Mandelbrot", GameWindowFlags.Default);
             int tex;
+            
 
+            byte[] buffer = new byte[width * height * 4];
             OpenTK.Graphics.IGraphicsContextInternal ctx = (OpenTK.Graphics.IGraphicsContextInternal)OpenTK.Graphics.GraphicsContext.CurrentContext;
 
             IntPtr contextHandle = ctx.Context.Handle;
 
 
 
-            var mandelbrot = new MandelbrotHelper(maxRecursionCount: 200);
+            var mandelbrot = new MandelbrotHelper(maxRecursionCount: 200, imageWidth: width, imageHeight: height);
             mandelbrot.Initialize();
 
 
@@ -42,10 +45,8 @@ namespace Mandelbrot
             GL.BindTexture(TextureTarget.Texture2D, tex);
 
             mandelbrot.GetNextImageFrame();
-            fixed (byte* p =  mandelbrot.ReadResultBuffer())
-            {
-                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, 1200, 800, 0, PixelFormat.Bgra, PixelType.UnsignedByte, (IntPtr)p);
-            }
+            mandelbrot.ReadResultBuffer(buffer);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, width, height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, buffer);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
@@ -81,11 +82,11 @@ namespace Mandelbrot
             {
                 if (changed)
                 {
+                    window.Title = string.Format("Mandelbrot: {0} + {1}i", mandelbrot.CenterX, mandelbrot.CenterY);
+
                     mandelbrot.GetNextImageFrame();
-                    fixed (byte* p = mandelbrot.ReadResultBuffer())
-                    {
-                        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, 1200, 800, 0, PixelFormat.Bgra, PixelType.UnsignedByte, (IntPtr)p);
-                    }
+                    mandelbrot.ReadResultBuffer(buffer);
+                    GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, width, height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, buffer);
                 }
                 changed = false;
             };
