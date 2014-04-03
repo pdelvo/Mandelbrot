@@ -8,15 +8,15 @@ using System.Text;
 
 namespace Mandelbrot
 {
-    public class MandelbrotHelper
+    public class MandelbrotHelper(int maxRecursionCount = 30, int imageWidth = 1200, int imageHeight = 800, double centerX = -0.5, double centerY = 0, double width = 2, double height = 2)
     {
-        public int ImageWidth { get; private set; }
-        public int ImageHeight { get; private set; }
-        public double CenterX { get; set; }
-        public double CenterY { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public int MaxRecursionCount { get; private set; }
+        public int ImageWidth { get; private set; } = imageWidth;
+        public int ImageHeight { get; private set; } = imageHeight;
+        public double CenterX { get; set; } = centerX;
+        public double CenterY { get; set; } = centerY;
+        public double Width { get; set; } = width;
+        public double Height { get; set; } = height;
+        public int MaxRecursionCount { get; private set; } = maxRecursionCount;
 
         ComputeContext _context;
         ComputeCommandQueue _commandQueue;
@@ -27,17 +27,6 @@ namespace Mandelbrot
 
         ComputeBuffer<int> _resultBuffer;
         ComputeBuffer<byte> _bitmapBuffer;
-
-        public MandelbrotHelper(int maxRecursionCount = 30, int imageWidth = 1200, int imageHeight = 800, double centerX = -0.5, double centerY = 0, double width = 2, double height  = 2)
-        {
-            MaxRecursionCount = maxRecursionCount;
-            ImageWidth = imageWidth;
-            ImageHeight = imageHeight;
-            CenterX = centerX;
-            CenterY = centerY;
-            Width = width;
-            Height = height;
-        }
 
         [DllImport("opengl32.dll")]
         extern static IntPtr wglGetCurrentDC();
@@ -53,21 +42,7 @@ namespace Mandelbrot
 
 
             ComputeContextPropertyList Properties = new ComputeContextPropertyList(props);
-
-            try
-            {
-                ComputeContext Ctx = new ComputeContext(ComputeDeviceTypes.Gpu, Properties, null, IntPtr.Zero);
-                ComputeErrorCode Error;
-
-                //unsafe
-                //{
-                //    Cloo.Bindings.CL10.CreateFromGLBuffer(Ctx.Handle, ComputeMemoryFlags.CopyHostPointer | ComputeMemoryFlags.ReadWrite, bufs[0], &Error);
-                //}
-            }
-            catch
-            {
-                int i = 0;
-            }
+            ComputeContext Ctx = new ComputeContext(ComputeDeviceTypes.Gpu, Properties, null, IntPtr.Zero);
             Initialize();
         }
 
