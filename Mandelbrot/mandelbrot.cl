@@ -32,8 +32,10 @@ __kernel void Mandelbrot (int maxRecursion, double middleX, double middleY, doub
 
 __kernel void ToBitmap(int maxRecursionCount, __global int* result, __global char* bitmap){
 	int id = get_global_id(0);
-	bitmap[id*4+0] = (char)(result[id] * 255 / maxRecursionCount);
-	bitmap[id*4+1] = (char)(result[id] * 255 / maxRecursionCount);
-	bitmap[id*4+2] = (char)(result[id] * 255 / maxRecursionCount);
-	bitmap[id*4+3] = (char)(255);
+	char color = (result[id] % 2 * 255);
+
+	bitmap[id*4+0] = color;
+	bitmap[id*4+1] = color;
+	bitmap[id*4+2] = color;
+	bitmap[id*4+3] = color;
 }
