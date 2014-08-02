@@ -21,7 +21,7 @@ __kernel void Mandelbrot (int maxRecursion, double middleX, double middleY, doub
 	result[id] = 0;
 
 	for(int i = 1; i < maxRecursion; i++){
-		double temp = resultA * resultA - resultB * resultB + a;
+		double temp = (resultA + resultB)*(resultA - resultB) + a;
 		resultB = 2 * resultA * resultB + b;
 		resultA = temp;
 		if(distanceSquared(resultA, resultB) > 4)
