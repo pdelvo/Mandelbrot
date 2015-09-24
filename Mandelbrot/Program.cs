@@ -1,43 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using OpenCL.Net.Extensions;
-using OpenCL.Net;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using OpenTK;
-using OpenTK.Graphics.OpenGL;
+﻿// <copyright file="Program.cs" company="Dennis Fischer">
+// Copyright (c) Dennis Fischer. All rights reserved.
+// </copyright>
 
 namespace Mandelbrot
 {
-    class Program
+    using System;
+    using OpenTK;
+    using OpenTK.Graphics.OpenGL;
+
+    /// <summary>
+    /// The main entry point for this application.
+    /// </summary>
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             SetupViewport();
         }
 
-        private unsafe static void SetupViewport()
+        private static unsafe void SetupViewport()
         {
             int width = 800;
             int height = 600;
             GameWindow window = new GameWindow(width, height, OpenTK.Graphics.GraphicsMode.Default, "Mandelbrot", GameWindowFlags.Default);
             int tex;
-            
 
             byte[] buffer = new byte[width * height * 4];
             OpenTK.Graphics.IGraphicsContextInternal ctx = (OpenTK.Graphics.IGraphicsContextInternal)OpenTK.Graphics.GraphicsContext.CurrentContext;
 
             IntPtr contextHandle = ctx.Context.Handle;
 
-
-
-            var mandelbrot = new MandelbrotHelper(maxRecursionCount: 200, imageWidth: width, imageHeight: height);
+            var mandelbrot = new MandelbrotCalculator(maxRecursionCount: 200, imageWidth: width, imageHeight: height);
             mandelbrot.Initialize();
-
 
             GL.Hint(HintTarget.PerspectiveCorrectionHint, HintMode.Nicest);
 
@@ -57,7 +51,10 @@ namespace Mandelbrot
             window.Mouse.ButtonDown += (s, e) => isButtonPressed = true;
             window.Keyboard.KeyDown += (s, e) =>
             {
-                if (e.Key == OpenTK.Input.Key.Escape) window.Close();
+                if (e.Key == OpenTK.Input.Key.Escape)
+                {
+                    window.Close();
+                }
             };
             window.Mouse.ButtonUp += (s, e) => isButtonPressed = false;
 
@@ -65,14 +62,14 @@ namespace Mandelbrot
             {
                 if (isButtonPressed)
                 {
-                    mandelbrot.CenterX -= (e.XDelta / (double)mandelbrot.ImageWidth * mandelbrot.Width);
-                    mandelbrot.CenterY += (e.YDelta / (double)mandelbrot.ImageHeight * mandelbrot.Height);
+                    mandelbrot.CenterX -= e.XDelta / (double)mandelbrot.ImageWidth * mandelbrot.Width;
+                    mandelbrot.CenterY += e.YDelta / (double)mandelbrot.ImageHeight * mandelbrot.Height;
                     changed = true;
                 }
             };
 
             window.Mouse.WheelChanged += (s, e) =>
-            { 
+            {
                 mandelbrot.Width /= Math.Pow(2,  e.DeltaPrecise);
                 mandelbrot.Height /= Math.Pow(2, e.DeltaPrecise);
                 changed = true;
@@ -88,6 +85,7 @@ namespace Mandelbrot
                     mandelbrot.ReadResultBuffer(buffer);
                     GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, width, height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, buffer);
                 }
+
                 changed = false;
             };
             window.RenderFrame += (sender, e) =>
@@ -97,13 +95,12 @@ namespace Mandelbrot
                 DrawImage(tex, mandelbrot.ImageWidth, mandelbrot.ImageHeight);
 
                 window.SwapBuffers();
-
-
             };
             window.VSync = VSyncMode.Off;
             window.Run(0);
         }
-        public static void DrawImage(int image, int width, int height)
+
+        private static void DrawImage(int image, int width, int height)
         {
             GL.MatrixMode(MatrixMode.Projection);
             GL.PushMatrix();
@@ -144,8 +141,6 @@ namespace Mandelbrot
             GL.PopMatrix();
 
             GL.MatrixMode(MatrixMode.Modelview);
-        } 
-
-
+        }
     }
 }

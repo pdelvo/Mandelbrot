@@ -1,132 +1,152 @@
-﻿using Cloo;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
+﻿// <copyright file="MandelbrotHelper.cs" company="Dennis Fischer">
+// Copyright (c) Dennis Fischer. All rights reserved.
+// </copyright>
 
 namespace Mandelbrot
 {
-    public class MandelbrotHelper
+    using System;
+    using System.IO;
+    using System.Linq;
+    using Cloo;
+
+    /// <summary>
+    /// A class that computes an image of the mandelbrot set on the gpu.
+    /// </summary>
+    public class MandelbrotCalculator
     {
+        private ComputeContext context;
+        private ComputeCommandQueue commandQueue;
+
+        private ComputeProgram program;
+        private ComputeKernel toBitmap;
+        private ComputeKernel mandelbrot;
+
+        private ComputeBuffer<int> resultBuffer;
+        private ComputeBuffer<byte> bitmapBuffer;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MandelbrotCalculator"/> class.
+        /// </summary>
+        /// <param name="maxRecursionCount">The maximum number of recursion.</param>
+        /// <param name="imageWidth">The width of the image in pixels.</param>
+        /// <param name="imageHeight">The height of the image in pixels.</param>
+        /// <param name="centerX">The real part of the center of the image.</param>
+        /// <param name="centerY">The imaginary part of the center of the image.</param>
+        /// <param name="width">The visible real interval.</param>
+        /// <param name="height">The visible imaginary interval</param>
+        public MandelbrotCalculator(int maxRecursionCount = 30, int imageWidth = 1200, int imageHeight = 800, double centerX = -0.5, double centerY = 0, double width = 2, double height = 2)
+        {
+            this.MaxRecursionCount = maxRecursionCount;
+            this.ImageWidth = imageWidth;
+            this.ImageHeight = imageHeight;
+            this.CenterX = centerX;
+            this.CenterY = centerY;
+            this.Width = width;
+            this.Height = height;
+        }
+
+        /// <summary>
+        /// The width of the image in pixels.
+        /// </summary>
         public int ImageWidth { get; private set; }
+
+        /// <summary>
+        /// The height of the image in pixels.
+        /// </summary>
         public int ImageHeight { get; private set; }
+
+        /// <summary>
+        /// The real part of the center of the image.
+        /// </summary>
         public double CenterX { get; set; }
+
+        /// <summary>
+        /// The imaginary part of the center of the image.
+        /// </summary>
         public double CenterY { get; set; }
+
+        /// <summary>
+        /// The visible real interval.
+        /// </summary>
         public double Width { get; set; }
+
+        /// <summary>
+        /// The visible imaginary interval.
+        /// </summary>
         public double Height { get; set; }
+
+        /// <summary>
+        /// The maximum number of recursions.
+        /// </summary>
         public int MaxRecursionCount { get; private set; }
 
-        ComputeContext _context;
-        ComputeCommandQueue _commandQueue;
-
-        ComputeProgram _program;
-        ComputeKernel _toBitmap;
-        ComputeKernel _mandelbrot;
-
-        ComputeBuffer<int> _resultBuffer;
-        ComputeBuffer<byte> _bitmapBuffer;
-
-        public MandelbrotHelper(int maxRecursionCount = 30, int imageWidth = 1200, int imageHeight = 800, double centerX = -0.5, double centerY = 0, double width = 2, double height  = 2)
-        {
-            MaxRecursionCount = maxRecursionCount;
-            ImageWidth = imageWidth;
-            ImageHeight = imageHeight;
-            CenterX = centerX;
-            CenterY = centerY;
-            Width = width;
-            Height = height;
-        }
-
-        [DllImport("opengl32.dll")]
-        extern static IntPtr wglGetCurrentDC();
-
-        public void Initialize(IntPtr contextHandle)
-        {
-            IntPtr wglHandle = wglGetCurrentDC();
-            ComputePlatform platform = ComputePlatform.GetByName("NVIDIA CUDA");
-            ComputeContextProperty p1 = new ComputeContextProperty(ComputeContextPropertyName.Platform, platform.Handle.Value);
-            ComputeContextProperty p2 = new ComputeContextProperty(ComputeContextPropertyName.CL_GL_CONTEXT_KHR, contextHandle);
-            ComputeContextProperty p3 = new ComputeContextProperty(ComputeContextPropertyName.CL_WGL_HDC_KHR, wglHandle);
-            List<ComputeContextProperty> props = new List<ComputeContextProperty>() { p1, p2, p2 };
-
-
-            ComputeContextPropertyList Properties = new ComputeContextPropertyList(props);
-
-            try
-            {
-                ComputeContext Ctx = new ComputeContext(ComputeDeviceTypes.Gpu, Properties, null, IntPtr.Zero);
-                ComputeErrorCode Error;
-
-                //unsafe
-                //{
-                //    Cloo.Bindings.CL10.CreateFromGLBuffer(Ctx.Handle, ComputeMemoryFlags.CopyHostPointer | ComputeMemoryFlags.ReadWrite, bufs[0], &Error);
-                //}
-            }
-            catch
-            {
-                int i = 0;
-            }
-            Initialize();
-        }
-
+        /// <summary>
+        /// Initializes local fields and the underlying compute context.
+        /// </summary>
         public void Initialize()
         {
-            if (_context == null)
+            if (this.context == null)
             {
                 var devices = ComputePlatform.Platforms.SelectMany(a => a.Devices).Where(a => a.Extensions.Contains("cl_khr_fp64")).Take(1).ToArray();
                 ComputeContextPropertyList list = new ComputeContextPropertyList(devices[0].Platform);
-                _context = new ComputeContext(devices, list, null, IntPtr.Zero);
+                this.context = new ComputeContext(devices, list, null, IntPtr.Zero);
             }
-            _program = new ComputeProgram(_context, File.ReadAllText("Mandelbrot.cl"));
 
-            _program.Build(null, null, null, IntPtr.Zero);
+            this.program = new ComputeProgram(this.context, File.ReadAllText("Mandelbrot.cl"));
 
-            _mandelbrot = _program.CreateKernel("Mandelbrot");
-            _toBitmap = _program.CreateKernel("ToBitmap");
+            this.program.Build(null, null, null, IntPtr.Zero);
 
-            _resultBuffer = new ComputeBuffer<int>(_context, ComputeMemoryFlags.ReadWrite, ImageWidth * ImageHeight);
-            _bitmapBuffer = new ComputeBuffer<byte>(_context, ComputeMemoryFlags.ReadWrite, ImageWidth * ImageHeight * 4);
+            this.mandelbrot = this.program.CreateKernel("Mandelbrot");
+            this.toBitmap = this.program.CreateKernel("ToBitmap");
 
-            _mandelbrot.SetMemoryArgument(7, _resultBuffer);
-            _toBitmap.SetMemoryArgument(1, _resultBuffer);
-            _toBitmap.SetMemoryArgument(2, _bitmapBuffer);
+            this.resultBuffer = new ComputeBuffer<int>(this.context, ComputeMemoryFlags.ReadWrite, this.ImageWidth * this.ImageHeight);
+            this.bitmapBuffer = new ComputeBuffer<byte>(this.context, ComputeMemoryFlags.ReadWrite, this.ImageWidth * this.ImageHeight * 4);
 
-            _commandQueue = new ComputeCommandQueue(_context, _context.Devices.OrderBy(a => a.Type).Where(a => a.Extensions.Contains("cl_khr_fp64")).First(), ComputeCommandQueueFlags.None);
+            this.mandelbrot.SetMemoryArgument(7, this.resultBuffer);
+            this.toBitmap.SetMemoryArgument(1, this.resultBuffer);
+            this.toBitmap.SetMemoryArgument(2, this.bitmapBuffer);
+
+            this.commandQueue = new ComputeCommandQueue(this.context, this.context.Devices.OrderBy(a => a.Type).Where(a => a.Extensions.Contains("cl_khr_fp64")).First(), ComputeCommandQueueFlags.None);
         }
 
+        /// <summary>
+        /// Reads the result bitmap from the gpu.
+        /// </summary>
+        /// <returns>A <see cref="byte"/> array with the raw bitmap data.</returns>
         public byte[] ReadResultBuffer()
         {
-            var bitmap = new byte[ImageWidth * ImageHeight * 4];
+            var bitmap = new byte[this.ImageWidth * this.ImageHeight * 4];
 
-            _commandQueue.ReadFromBuffer(_bitmapBuffer, ref bitmap, true, null);
+            this.commandQueue.ReadFromBuffer(this.bitmapBuffer, ref bitmap, true, null);
             return bitmap;
         }
+
+        /// <summary>
+        /// Reads the result bitmap from the gpu.
+        /// </summary>
+        /// <param name="bitmap">An array to hold the result bitmap data.</param>
         public void ReadResultBuffer(byte[] bitmap)
         {
-            _commandQueue.ReadFromBuffer(_bitmapBuffer, ref bitmap, true, null);
+            this.commandQueue.ReadFromBuffer(this.bitmapBuffer, ref bitmap, true, null);
         }
 
+        /// <summary>
+        /// Computes the next image frame on the gpu.
+        /// </summary>
         public void GetNextImageFrame()
         {
-            _mandelbrot.SetValueArgument(0, MaxRecursionCount);
-            _mandelbrot.SetValueArgument(1, CenterX);
-            _mandelbrot.SetValueArgument(2, CenterY);
-            _mandelbrot.SetValueArgument(3, Width);
-            _mandelbrot.SetValueArgument(4, Height);
-            _mandelbrot.SetValueArgument(5, ImageWidth);
-            _mandelbrot.SetValueArgument(6, ImageHeight);
+            this.mandelbrot.SetValueArgument(0, this.MaxRecursionCount);
+            this.mandelbrot.SetValueArgument(1, this.CenterX);
+            this.mandelbrot.SetValueArgument(2, this.CenterY);
+            this.mandelbrot.SetValueArgument(3, this.Width);
+            this.mandelbrot.SetValueArgument(4, this.Height);
+            this.mandelbrot.SetValueArgument(5, this.ImageWidth);
+            this.mandelbrot.SetValueArgument(6, this.ImageHeight);
 
-            _toBitmap.SetValueArgument(0, MaxRecursionCount);
+            this.toBitmap.SetValueArgument(0, this.MaxRecursionCount);
 
-            _commandQueue.Execute(_mandelbrot, null, new long[] { ImageWidth * ImageHeight }, null, null);
-            _commandQueue.Execute(_toBitmap, null, new long[] { ImageWidth * ImageHeight }, null, null);
-
-            //ComputeImage2D destination = new ComputeImage2D(_context, ComputeMemoryFlags.ReadWrite, new ComputeImageFormat(ComputeImageChannelOrder.Bgra, ComputeImageChannelType.UnsignedInt8), ImageWidth, ImageHeight, 0, IntPtr.Zero);
-
-            //_commandQueue.CopyBufferToImage(_bitmapBuffer, destination, null);
-
+            this.commandQueue.Execute(this.mandelbrot, null, new long[] { this.ImageWidth * this.ImageHeight }, null, null);
+            this.commandQueue.Execute(this.toBitmap, null, new long[] { this.ImageWidth * this.ImageHeight }, null, null);
         }
     }
 }
