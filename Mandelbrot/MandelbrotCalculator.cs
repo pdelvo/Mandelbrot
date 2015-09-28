@@ -1,4 +1,4 @@
-﻿// <copyright file="MandelbrotHelper.cs" company="Dennis Fischer">
+﻿// <copyright file="MandelbrotCalculator.cs" company="Dennis Fischer">
 // Copyright (c) Dennis Fischer. All rights reserved.
 // </copyright>
 
