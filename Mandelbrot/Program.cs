@@ -118,7 +118,7 @@ namespace Mandelbrot
 
             GL.BindTexture(TextureTarget.Texture2D, image);
 
-            GL.Begin(BeginMode.Quads);
+            GL.Begin(PrimitiveType.Quads);
 
             GL.TexCoord2(0, 0);
             GL.Vertex3(0, 0, 0);
